@@ -132,7 +132,7 @@ function DashboardContent() {
       {/* Footer */}
       <footer className="mt-8 text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.6s" }}>
         <p suppressHydrationWarning>
-          Last updated: {currentData?.lastUpdate ? currentData.lastUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."} • Data sourced from OpenWeather
+          Last updated: {currentData?.lastUpdate ? new Date(currentData.lastUpdate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."} • Data sourced from OpenWeather
         </p>
       </footer>
     </>

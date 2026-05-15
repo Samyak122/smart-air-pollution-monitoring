@@ -112,7 +112,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.content}</p>
         <p className={`text-[10px] mt-1.5 ${isUser ? "text-white/60 text-right" : "text-white/40"}`}>
           {mounted
-            ? message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            ? new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
             : "..."}
         </p>
       </div>

@@ -37,7 +37,7 @@ export function DashboardHeader() {
 
           {currentData && (
             <div className="text-sm text-muted-foreground mt-2">
-              Last updated: {currentData.lastUpdate.toLocaleTimeString()}
+              Last updated: {new Date(currentData.lastUpdate).toLocaleTimeString()}
             </div>
           )}
         </div>
