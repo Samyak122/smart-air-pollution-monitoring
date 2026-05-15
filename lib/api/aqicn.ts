@@ -1,4 +1,3 @@
-import "server-only";
 import { AQICNResponse, AirQualityData, AQILevel, CitySearchResult } from "@/lib/types";
 
 const AQICN_API_URL = "https://api.waqi.info";
