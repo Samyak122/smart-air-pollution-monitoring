@@ -105,9 +105,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setFavoriteCities((prev) => prev.filter((c) => c !== city))
   }, [])
 
-  // Fetch initial data on mount
+  // Fetch initial data on mount (with geolocation auto-detect)
   useEffect(() => {
-    fetchAirQuality(currentCity)
+    const autoDetectLocation = async () => {
+      if (typeof window !== "undefined" && navigator.geolocation && process.env.NEXT_PUBLIC_ENABLE_GEOLOCATION === "true") {
+        navigator.geolocation.getCurrentPosition(
+          async (position) => {
+            const { latitude, longitude } = position.coords
+            await fetchByCoordinates(latitude, longitude)
+          },
+          (err) => {
+            console.warn("Geolocation denied or failed, using default city:", err.message)
+            fetchAirQuality(currentCity)
+          },
+          { timeout: 10000 }
+        )
+      } else {
+        fetchAirQuality(currentCity)
+      }
+    }
+
+    autoDetectLocation()
   }, [])
 
   const value: AppContextType = {

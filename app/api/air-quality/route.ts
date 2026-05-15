@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { fetchAirQualityByCity, fetchAirQualityByCoordinates } from "@/lib/api/aqicn"
+import { fetchWeatherByCity, fetchWeatherByCoordinates, mergeWeatherWithAirQuality } from "@/lib/api/openweather"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -9,12 +10,21 @@ export async function GET(req: Request) {
 
   try {
     let data
+    let weather
     if (city) {
       data = await fetchAirQualityByCity(city)
+      weather = await fetchWeatherByCity(city)
     } else if (lat && lon) {
-      data = await fetchAirQualityByCoordinates(parseFloat(lat), parseFloat(lon))
+      const latitude = parseFloat(lat)
+      const longitude = parseFloat(lon)
+      data = await fetchAirQualityByCoordinates(latitude, longitude)
+      weather = await fetchWeatherByCoordinates(latitude, longitude)
     } else {
       return NextResponse.json({ error: "City or coordinates required" }, { status: 400 })
+    }
+
+    if (data && weather) {
+      data = mergeWeatherWithAirQuality(data, weather)
     }
 
     return NextResponse.json(data)

@@ -266,11 +266,10 @@ export function parseOpenWeatherForecast(
     .sort((a, b) => a.dt - b.dt)
     .slice(0, 5) // Return 5 days
     .map((forecast) => {
-      // Temperature is already in Celsius (units=metric), check if conversion needed
-      const tempHigh = forecast.main.temp_max > 100 ? kelvinToCelsius(forecast.main.temp_max) : forecast.main.temp_max;
-      const tempLow = forecast.main.temp_min > 100 ? kelvinToCelsius(forecast.main.temp_min) : forecast.main.temp_min;
-      const tempCurrent = forecast.main.temp > 100 ? kelvinToCelsius(forecast.main.temp) : forecast.main.temp;
-      
+      const tempHigh = forecast.main.temp_max;
+      const tempLow = forecast.main.temp_min;
+      const tempCurrent = forecast.main.temp;
+
       return {
         date: new Date(forecast.dt * 1000),
         aqi: Math.round(forecast.clouds.all * 2),
@@ -301,9 +300,8 @@ export function mergeWeatherWithAirQuality(
   airQuality: AirQualityData,
   weather: OpenWeatherCurrent
 ): AirQualityData {
-  // Convert temperature from Kelvin to Celsius if it looks like Kelvin
-  const temp = weather.main.temp > 100 ? kelvinToCelsius(weather.main.temp) : weather.main.temp;
-  
+  const temp = weather.main.temp;
+
   return {
     ...airQuality,
     temperature: temp,
@@ -323,7 +321,7 @@ export async function fetchAirPollutionByCity(
 
   try {
     const cityName = city.split(",")[0].trim();
-    
+
     // First, get city coordinates
     const weatherData = await fetchWeatherByCity(city);
     if (!weatherData) return null;
@@ -442,8 +440,8 @@ export function parseOpenWeatherAirPollution(
   const dominantPollutant =
     pollutants.length > 0
       ? pollutants.reduce((prev, current) =>
-          current.value / current.maxValue > prev.value / prev.maxValue ? current : prev
-        ).label
+        current.value / current.maxValue > prev.value / prev.maxValue ? current : prev
+      ).label
       : "N/A";
 
   return {

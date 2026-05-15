@@ -285,13 +285,15 @@ function extractLocation(
 
   const patterns = [
     // "weather in Mumbai", "weather for London", "weather at Paris"
-    /weather\s+(?:in|for|at)\s+([A-Za-z][a-zA-Z\s\-]{1,30})/i,
+    /weather\s+(?:in|for|at|of)\s+([A-Za-z][a-zA-Z\s\-]{1,30})/i,
     // "in Mumbai", "for London"
-    /\b(?:in|for|at|near|about)\s+([A-Z][a-zA-Z\s\-]{1,28}?)(?:\s*[?,!.]|$)/,
+    /\b(?:in|for|at|near|about|to)\s+([a-zA-Z][a-zA-Z\s\-]{1,28}?)(?:\s*[?,!.]|$)/i,
     // "Mumbai weather"
-    /([A-Z][a-zA-Z\s\-]{1,28}?)\s+weather\b/i,
+    /([a-zA-Z][a-zA-Z\s\-]{1,28}?)\s+weather\b/i,
     // "visit/go to/travel to Mumbai"
-    /(?:visit|go to|travel to|trip to)\s+([A-Z][a-zA-Z\s\-]{1,28})/i,
+    /(?:visit|go to|travel to|trip to|weather in)\s+([a-zA-Z][a-zA-Z\s\-]{1,28})/i,
+    // Just a city name (for short queries like "London?")
+    /^([A-Z][a-z]{2,20})\?*$/
   ]
 
   const tryExtract = (text: string): string | null => {
@@ -317,7 +319,13 @@ function extractLocation(
     if (loc) return loc
   }
 
-  return defaultLocation ?? null
+  // ONLY use defaultLocation if the question is actually about weather
+  const isWeatherQ = /weather|temp|rain|sun|cloud|sky|hot|cold|condition|how is it|forecast/i.test(question)
+  if (isWeatherQ && defaultLocation) {
+    return defaultLocation
+  }
+
+  return null
 }
 
 
@@ -455,24 +463,29 @@ export async function askWeatherAssistant(
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content ?? ""
 
-  // Step 1: Extract location
-  const location = extractLocation(lastUserMsg, messages, defaultLocation)
+  // Step 1: Extract location (defaulting to the detected city if none specified)
+  const location = extractLocation(lastUserMsg, messages, defaultLocation) || defaultLocation
 
   if (!location) {
     return {
       answer:
-        "🌍 Please tell me which city you're asking about! For example:\n\n" +
-        '• *"What\'s the weather in **Mumbai**?"*\n' +
-        '• *"Will it rain tomorrow in **London**?"*\n' +
-        '• *"What should I wear in **Paris**?"*',
+        "🌍 I'm ready to help! Could you please specify which city you'd like to check? (e.g., Mumbai, London, etc.)",
     }
   }
 
-  // Step 2: Geocode
-  const geo = await geocode(location)
+  // Step 2: Geocode (with fallback for complex names like "Shivajinagar, Pune, Pune")
+  let geo = await geocode(location)
+  
+  if (!geo && location.includes(",")) {
+    // Fallback: Try just the first part (e.g., "Shivajinagar" or "Pune")
+    const simplified = location.split(",")[0].trim()
+    console.log(`[Server] Geocode failed for "${location}", retrying with "${simplified}"`)
+    geo = await geocode(simplified)
+  }
+
   if (!geo) {
     return {
-      answer: `😕 I couldn't find **"${location}"** on the map. Try using a more specific city name (e.g., "Mumbai, India").`,
+      answer: `😕 I couldn't find **"${location}"** on the map. Try using a simpler city name (e.g., just "Pune").`,
     }
   }
 
