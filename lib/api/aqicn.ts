@@ -1,7 +1,8 @@
+import "server-only";
 import { AQICNResponse, AirQualityData, AQILevel, CitySearchResult } from "@/lib/types";
 
 const AQICN_API_URL = "https://api.waqi.info";
-const API_KEY = process.env.NEXT_PUBLIC_AQICN_API_KEY;
+const API_KEY = process.env.AQICN_API_KEY || process.env.NEXT_PUBLIC_AQICN_API_KEY;
 
 // Map AQICN AQI index to level
 function getAQILevel(aqi: number): AQILevel {

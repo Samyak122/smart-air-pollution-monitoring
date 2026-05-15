@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { AirQualityData, AlertConfig } from "@/lib/types"
-import { fetchAirQualityByCity, fetchAirQualityByCoordinates } from "@/lib/api/aqicn"
 
 interface AppContextType {
   // Current data
@@ -20,7 +19,7 @@ interface AppContextType {
   // Settings
   alertConfig: AlertConfig
   setAlertConfig: (config: Partial<AlertConfig>) => void
-  
+
   // Favorites
   favoriteCities: string[]
   addFavorite: (city: string) => void
@@ -54,36 +53,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await fetchAirQualityByCity(city)
+      const res = await fetch(`/api/air-quality?city=${encodeURIComponent(city)}`)
+      if (!res.ok) {
+        setError(`Could not fetch data for ${city}`)
+        return
+      }
+      const data = await res.json()
       if (data) {
         setCurrentData(data)
-        setCurrentCity(city)
-      } else {
-        setError(`Could not fetch data for ${city}`)
+        setCurrentCity(data.location.name)
       }
     } catch (err) {
-      setError(`Error fetching air quality data: ${err}`)
+      setError(`Error fetching data: ${err}`)
     } finally {
       setIsLoading(false)
     }
+
   }, [])
 
   const fetchByCoordinates = useCallback(async (lat: number, lon: number) => {
     setIsLoading(true)
     setError(null)
     try {
-      const data = await fetchAirQualityByCoordinates(lat, lon)
+      const res = await fetch(`/api/air-quality?lat=${lat}&lon=${lon}`)
+      if (!res.ok) {
+        setError("Could not fetch data for current location")
+        return
+      }
+      const data = await res.json()
       if (data) {
         setCurrentData(data)
         setCurrentCity(data.location.name)
-      } else {
-        setError("Could not fetch data for current location")
       }
     } catch (err) {
-      setError(`Error fetching air quality data: ${err}`)
+      setError(`Error fetching data: ${err}`)
     } finally {
       setIsLoading(false)
     }
+
   }, [])
 
   const clearError = useCallback(() => {

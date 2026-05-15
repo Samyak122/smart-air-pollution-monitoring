@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import { useState, useEffect } from "react"
 import { useApp } from "@/lib/context/app-context"
 import { useRealTimeUpdates, useAirQualityAlerts } from "@/hooks/use-air-quality"
 import { DashboardHeader } from "@/components/dashboard/dashboard-header"
@@ -10,24 +11,56 @@ import { Forecast } from "@/components/dashboard/forecast"
 import { AqiChart } from "@/components/dashboard/aqi-chart"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { AlertsPanel } from "@/components/dashboard/alerts-panel"
+import { WeatherAssistantButton } from "@/components/dashboard/weather-assistant-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 
+interface ForecastDay {
+  day: string
+  date: string
+  aqi: number
+  icon: "sunny" | "cloudy" | "rainy" | "foggy" | "windy"
+  high: number
+  low: number
+}
+
 function DashboardContent() {
-  const { currentData, isLoading, error } = useApp()
+  const { currentData, isLoading, error, currentCity } = useApp()
   const { alerts } = useAirQualityAlerts()
+  const [forecast, setForecast] = useState<ForecastDay[]>([])
 
   // Enable real-time updates (30 minutes interval)
   useRealTimeUpdates(1800000)
 
-  // Generate mock forecast (in a real app, fetch from API)
-  const formatDate = (date: Date) => {
-    const d = new Date(date)
-    return `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}/${d.getFullYear()}`
-  }
-  const mockForecast = [
-    { day: "Today", date: formatDate(new Date()), aqi: currentData?.aqi || 72, icon: "cloudy" as const, high: 18, low: 12 },
-    { day: "Tomorrow", date: formatDate(new Date(Date.now() + 86400000)), aqi: 65, icon: "sunny" as const, high: 20, low: 14 },
-  ]
+  // Fetch forecast data
+  useEffect(() => {
+    async function loadForecast() {
+      try {
+        const res = await fetch(`/api/forecast?city=${encodeURIComponent(currentCity)}`)
+        if (res.ok) {
+          const parsed = await res.json()
+          const dayNames = ["Today", "Tomorrow", "Mon", "Tue", "Wed", "Thu", "Fri"]
+          const formatted: ForecastDay[] = parsed.map((day: any, index: number) => {
+            return {
+              day: dayNames[index] || new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }),
+              date: new Date(day.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+              aqi: day.aqi,
+              icon: "cloudy" as const,
+              high: day.temperature?.high || 0,
+              low: day.temperature?.low || 0,
+            }
+          })
+          setForecast(formatted)
+        }
+      } catch (err) {
+        console.error("Forecast fetch error:", err)
+      }
+
+    }
+
+    if (currentCity) {
+      loadForecast()
+    }
+  }, [currentCity])
 
   // Generate mock chart data
   const mockChartData = Array.from({ length: 9 }, (_, i) => ({
@@ -86,7 +119,7 @@ function DashboardContent() {
           {/* Chart and Forecast */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <AqiChart data={mockChartData} />
-            <Forecast forecast={mockForecast} />
+            {forecast.length > 0 ? <Forecast forecast={forecast} /> : <Skeleton className="h-64 rounded-2xl" />}
           </div>
         </div>
 
@@ -98,8 +131,8 @@ function DashboardContent() {
 
       {/* Footer */}
       <footer className="mt-8 text-center text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: "0.6s" }}>
-        <p>
-          Last updated: {currentData?.lastUpdate.toLocaleTimeString()} • Data sourced from AQICN
+        <p suppressHydrationWarning>
+          Last updated: {currentData?.lastUpdate ? currentData.lastUpdate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "..."} • Data sourced from OpenWeather
         </p>
       </footer>
     </>
@@ -107,6 +140,8 @@ function DashboardContent() {
 }
 
 export default function Dashboard() {
+  const { currentData } = useApp()
+  
   return (
     <div className="relative min-h-screen overflow-hidden">
       {/* Background Image with Gradient Overlay */}
@@ -127,6 +162,11 @@ export default function Dashboard() {
         <div className="container mx-auto px-4 py-6 max-w-7xl">
           <DashboardContent />
         </div>
+      </div>
+
+      {/* Weather Assistant Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <WeatherAssistantButton defaultLocation={currentData?.location.name} />
       </div>
     </div>
   )
